@@ -81,3 +81,6 @@ No Alcohol and Diet Done are regular schedule activities and are included in the
 - Gradient focus panel and primary actions
 - Updated progress chart colors
 - Responsive mobile styling retained
+
+## V2.4 SQLite persistence
+The default database is now `data/vinoth_os.db`. It is created automatically and is suitable for a single-user EC2 deployment on persistent EBS storage. See `EC2_SQLITE.md`.
