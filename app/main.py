@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from apscheduler.schedulers.background import BackgroundScheduler
 from pywebpush import webpush, WebPushException
 from .database import Base, engine, get_db, SessionLocal
-from .models import Activity, ActivityLog, FocusSession, PushSubscription, ReminderDelivery, DailyHabitLog
+from .models import Activity, ActivityLog, FocusSession, PushSubscription, ReminderDelivery
 BASE=Path(__file__).resolve().parent
 app=FastAPI(title='Vinoth OS')
 app.mount('/static',StaticFiles(directory=BASE/'static'),name='static')
@@ -28,31 +28,21 @@ def format_time_12h(value):
 templates.env.filters['time12'] = format_time_12h
 Base.metadata.create_all(bind=engine)
 TZ=os.getenv('FOCUSFLOW_TIMEZONE','America/New_York'); VAPID_PUBLIC=os.getenv('VAPID_PUBLIC_KEY',''); VAPID_PRIVATE=os.getenv('VAPID_PRIVATE_KEY',''); VAPID_SUBJECT=os.getenv('VAPID_SUBJECT','mailto:you@example.com')
-DEFAULTS=[('Wake + water','06:30','06:35','Health'),('AG1','06:35','06:40','Health'),('Pre-gym snack','06:50','07:00','Health'),('Pre-workout','07:00','07:05','Gym'),('Gym','07:20','08:20','Gym'),('Breakfast + creatine','08:40','09:10','Health'),('Work','09:15','12:00','Work'),('Lunch','12:00','12:45','Personal'),('Work / meetings','12:45','15:30','Work'),('Break / walk','15:30','16:00','Relax'),('AI learning','16:00','17:30','Study'),('AI project','17:45','18:45','Study'),('Dinner','18:45','19:30','Personal'),('Personal time','19:30','20:30','Relax'),('Relaxation','20:30','21:30','Relax'),('Magnesium','21:30','21:35','Health'),('Wind down','21:35','22:15','Relax'),('Sleep','22:30','06:30','Sleep')]
+DEFAULTS=[('Wake + water','06:30','06:35','Health'),('AG1','06:35','06:40','Health'),('Pre-gym snack','06:50','07:00','Health'),('Pre-workout','07:00','07:05','Gym'),('Gym','07:20','08:20','Gym'),('Breakfast + creatine','08:40','09:10','Health'),('Work','09:15','12:00','Work'),('Lunch','12:00','12:45','Personal'),('Work / meetings','12:45','15:30','Work'),('Break / walk','15:30','16:00','Relax'),('AI learning','16:00','17:30','Study'),('AI project','17:45','18:45','Study'),('Dinner','18:45','19:30','Personal'),('Personal time','19:30','20:30','Relax'),('Relaxation','20:30','21:30','Relax'),('Magnesium','21:30','21:35','Health'),('Wind down','21:35','22:15','Relax'),('No Alcohol','22:15','22:20','Health'),('Diet Done','22:20','22:25','Health'),('Sleep','22:30','06:30','Sleep')]
 def seed():
  db=SessionLocal()
- if db.query(Activity).count()==0:
-  for x in DEFAULTS: db.add(Activity(title=x[0],start_time=x[1],end_time=x[2],category=x[3]))
-  db.commit()
- db.close()
+ # Add any missing default activities without duplicating existing ones.
+ existing={title for (title,) in db.query(Activity.title).all()}
+ for x in DEFAULTS:
+  if x[0] not in existing:
+   db.add(Activity(title=x[0],start_time=x[1],end_time=x[2],category=x[3]))
+ db.commit(); db.close()
 seed()
 def selected_date(raw):
  try:return date.fromisoformat(raw) if raw else date.today()
  except:return date.today()
 def day_data(db,d):
  acts=db.query(Activity).order_by(Activity.start_time).all(); logs={x.activity_id:x.completed for x in db.query(ActivityLog).filter(ActivityLog.log_date==d).all()}; rows=[{'id':a.id,'title':a.title,'start_time':a.start_time,'end_time':a.end_time,'category':a.category,'completed':logs.get(a.id,False),'reminder_enabled':a.reminder_enabled,'reminder_offset':a.reminder_offset} for a in acts]; done=sum(x['completed'] for x in rows); return rows,round(done/len(rows)*100) if rows else 0
-
-HABITS=[('no_alcohol','No Alcohol Today','🍺'),('diet_done','Diet Done Today','🥗')]
-def habit_data(db,d):
- logs={x.habit_key:x.completed for x in db.query(DailyHabitLog).filter(DailyHabitLog.log_date==d).all()}
- return [{'key':key,'title':title,'icon':icon,'completed':logs.get(key,False)} for key,title,icon in HABITS]
-def habit_streak(db,key):
- d=date.today(); n=0
- for _ in range(3660):
-  log=db.query(DailyHabitLog).filter_by(habit_key=key,log_date=d).first()
-  if not log or not log.completed: break
-  n+=1; d-=timedelta(days=1)
- return n
 
 def streak(db,category=None):
  d=date.today(); n=0
@@ -64,7 +54,7 @@ def streak(db,category=None):
  return n
 @app.get('/',response_class=HTMLResponse)
 def home(request:Request,day:str|None=None,db:Session=Depends(get_db)):
- d=selected_date(day); acts,p=day_data(db,d); habits=habit_data(db,d); return templates.TemplateResponse('index.html',{'request':request,'activities':acts,'habits':habits,'progress':p,'day':d,'today':date.today(),'page':'today','vapid_public':VAPID_PUBLIC})
+ d=selected_date(day); acts,p=day_data(db,d); return templates.TemplateResponse('index.html',{'request':request,'activities':acts,'progress':p,'day':d,'today':date.today(),'page':'today','vapid_public':VAPID_PUBLIC})
 @app.get('/history',response_class=HTMLResponse)
 def history(request:Request,day:str|None=None,period:str='week',range_filter:str|None=Query(default=None, alias='range'),db:Session=Depends(get_db)):
  # Accept older ?range= links without shadowing Python's built-in range() function.
@@ -93,6 +83,10 @@ def history(request:Request,day:str|None=None,period:str='week',range_filter:str
  focus=sum(x['focus'] for x in raw)
  gymids=[a.id for a in db.query(Activity).filter(Activity.title=='Gym').all()]
  gym=db.query(ActivityLog).filter(ActivityLog.log_date>=start,ActivityLog.log_date<=d,ActivityLog.activity_id.in_(gymids),ActivityLog.completed==True).count() if gymids else 0
+ no_alcohol_ids=[a.id for a in db.query(Activity).filter(Activity.title=='No Alcohol').all()]
+ no_alcohol=db.query(ActivityLog).filter(ActivityLog.log_date>=start,ActivityLog.log_date<=d,ActivityLog.activity_id.in_(no_alcohol_ids),ActivityLog.completed==True).count() if no_alcohol_ids else 0
+ diet_done_ids=[a.id for a in db.query(Activity).filter(Activity.title=='Diet Done').all()]
+ diet_done=db.query(ActivityLog).filter(ActivityLog.log_date>=start,ActivityLog.log_date<=d,ActivityLog.activity_id.in_(diet_done_ids),ActivityLog.completed==True).count() if diet_done_ids else 0
  avg=round(sum(x['progress'] for x in raw)/len(raw)) if raw else 0
  # Keep charts readable by aggregating longer ranges.
  if period in ('week','month'):
@@ -105,25 +99,7 @@ def history(request:Request,day:str|None=None,period:str='week',range_filter:str
   for (y,m),items in sorted(buckets.items()):
    chart.append({'label':date(y,m,1).strftime('%b') if period=='year' else date(y,m,1).strftime('%b %y'),'progress':round(sum(i['progress'] for i in items)/len(items)),'date':items[-1]['date']})
  
- # Daily habit metrics for the selected period.
- habit_metrics={}
- for key,title,icon in HABITS:
-  completed_days=db.query(DailyHabitLog).filter(DailyHabitLog.habit_key==key,DailyHabitLog.log_date>=start,DailyHabitLog.log_date<=d,DailyHabitLog.completed==True).count()
-  habit_metrics[key]={'title':title,'icon':icon,'days':completed_days,'rate':round(completed_days/total_days*100) if total_days else 0,'streak':habit_streak(db,key)}
- return templates.TemplateResponse('history.html',{'request':request,'activities':acts,'habits':habit_data(db,d),'habit_metrics':habit_metrics,'progress':p,'day':d,'today':today,'days':chart,'focus_total':focus,'gym_total':gym,'avg':avg,'study_streak':streak(db,'Study'),'gym_streak':streak(db,'Gym'),'page':'history','range':period,'range_label':label,'range_days':total_days})
-
-@app.post('/habit/{habit_key}/toggle')
-def toggle_habit(habit_key:str,request:Request,day:str=Form(''),db:Session=Depends(get_db)):
- valid={x[0] for x in HABITS}
- if habit_key not in valid: raise HTTPException(status_code=404,detail='Habit not found')
- d=selected_date(day)
- log=db.query(DailyHabitLog).filter_by(habit_key=habit_key,log_date=d).first()
- if log is None:
-  log=DailyHabitLog(habit_key=habit_key,log_date=d,completed=True); db.add(log)
- else: log.completed=not log.completed
- db.commit(); db.refresh(log)
- if request.headers.get('x-requested-with')=='XMLHttpRequest': return JSONResponse({'ok':True,'habit_key':habit_key,'completed':bool(log.completed),'day':d.isoformat()})
- return RedirectResponse(f'/?day={d.isoformat()}#daily-goals',303)
+ return templates.TemplateResponse('history.html',{'request':request,'activities':acts,'progress':p,'day':d,'today':today,'days':chart,'focus_total':focus,'gym_total':gym,'no_alcohol_total':no_alcohol,'diet_done_total':diet_done,'avg':avg,'study_streak':streak(db,'Study'),'gym_streak':streak(db,'Gym'),'page':'history','range':period,'range_label':label,'range_days':total_days})
 
 @app.post('/add')
 def add(title:str=Form(...),start_time:str=Form(...),end_time:str=Form(''),category:str=Form('Personal'),reminder_enabled:bool=Form(False),reminder_offset:int=Form(0),db:Session=Depends(get_db)):

@@ -1,6 +1,6 @@
-## Vinoth OS V2.2.0
+## Vinoth OS V2.2.1
 
-V2.2.0 adds no-refresh activity deletion so deleting an item preserves the current scroll position.
+V2.2.1 adds no-refresh activity deletion so deleting an item preserves the current scroll position.
 
 # Vinoth OS V2.1.6
 
@@ -27,13 +27,6 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ./generate_vapid_keys.sh
 ```
-# Run on Same network
-```bash
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-ipconfig getifaddr en0
-http://192.168.1.25:8000
-```
-
 Copy `.env.example` to `.env`, then paste the two values printed by the key script. Set `VAPID_SUBJECT` to an email you control. Export the settings before launch:
 ```bash
 set -a; source .env; set +a
@@ -77,3 +70,14 @@ Those are intentionally separate because they require your hosting/account choic
 
 ## Daily goals
 Vinoth OS V2.2 adds whole-day tracking for **No Alcohol Today** and **Diet Done Today**. These are stored separately from timed schedule activities and appear in Week, Month, Year, and Start-to-date Progress with completed-day counts, adherence percentage, and current streaks.
+
+
+## V2.2.1
+No Alcohol and Diet Done are regular schedule activities and are included in the same daily/progress percentage bars as all other schedule items.
+
+## V2.3 UI refresh
+- Color-coded schedule accents by category
+- Colored progress/stat cards with icons
+- Gradient focus panel and primary actions
+- Updated progress chart colors
+- Responsive mobile styling retained
