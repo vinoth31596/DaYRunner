@@ -27,6 +27,13 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ./generate_vapid_keys.sh
 ```
+# Run on Same network
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+ipconfig getifaddr en0
+http://192.168.1.25:8000
+```
+
 Copy `.env.example` to `.env`, then paste the two values printed by the key script. Set `VAPID_SUBJECT` to an email you control. Export the settings before launch:
 ```bash
 set -a; source .env; set +a
