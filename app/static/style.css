@@ -21,3 +21,195 @@ header{padding:6px 2px}.ring{background:linear-gradient(135deg,var(--primary),#4
 .add button,.datepick button{background:linear-gradient(135deg,var(--primary),#4f46e5);box-shadow:0 6px 14px #2563eb26}.notify{background:var(--primary)}
 @media(max-width:520px){main{padding:18px 13px 50px}.stats{grid-template-columns:1fr 1fr}.stats .stat:first-child:nth-last-child(3){grid-column:1/-1}.stat{padding:15px 8px}}
 @media(prefers-color-scheme:dark){body{background:linear-gradient(180deg,#090d14,#0f172a)}.activity,.stat,.card{border-color:#263244}.activity .check{background:#202938}.stat strong{color:#f8fafc}.bar-track{background:#263244}}
+
+/* ==========================================
+   ADD ACTIVITY - RESPONSIVE UI
+   ========================================== */
+
+.add-activity-card {
+    overflow: hidden;
+}
+
+.add {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+}
+
+.form-field > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* Make all form controls consistent */
+.add input:not([type="checkbox"]),
+.add select {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    height: 48px;
+
+    padding: 0 14px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+
+    background: #ffffff;
+    color: #111827;
+
+    font: inherit;
+    font-size: 16px;
+}
+
+/* ==========================================
+   iOS / iPadOS TIME INPUT FIX
+   ========================================== */
+
+.time-fields {
+    width: 100%;
+    min-width: 0;
+}
+
+.time-fields .form-field {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.add input[type="time"] {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    height: 48px;
+
+    padding: 0 14px;
+
+    box-sizing: border-box !important;
+
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+
+    background: #fff;
+    color: #111827;
+
+    font-size: 16px;
+
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Safari's internal date/time control */
+.add input[type="time"]::-webkit-date-and-time-value {
+    text-align: left;
+    width: 100%;
+    min-width: 0;
+}
+
+/* iPhone */
+@media screen and (max-width: 600px) {
+
+    .time-fields {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 14px;
+    }
+
+    .time-fields .form-field {
+        display: flex;
+        flex-direction: column;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .time-fields input[type="time"] {
+        display: block;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        flex: none !important;
+    }
+}
+/* Start + End time */
+.time-fields {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    gap: 14px;
+
+    width: 100%;
+    min-width: 0;
+}
+
+/* Reminder checkbox */
+.reminder-add {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    font-weight: 600;
+}
+
+.reminder-add input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+
+    margin: 0;
+
+    flex: 0 0 auto;
+}
+
+/* Add button */
+.add-submit {
+    width: 100%;
+    min-height: 48px;
+
+    box-sizing: border-box;
+
+    border-radius: 12px;
+}
+
+
+/* ==========================================
+   MOBILE
+   ========================================== */
+
+@media (max-width: 600px) {
+
+    .time-fields {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .add {
+        gap: 14px;
+    }
+
+    .add input:not([type="checkbox"]),
+    .add select,
+    .add-submit {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
